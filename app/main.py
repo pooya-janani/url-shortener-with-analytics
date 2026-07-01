@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app import models
 from app.database import Base, engine
-from app.routers import api_keys, users
+from app.routers import api_keys, users, links
 
 
 Base.metadata.create_all(bind=engine)
@@ -14,6 +14,8 @@ app = FastAPI(
 
 app.include_router(users.router)
 app.include_router(api_keys.router)
+app.include_router(links.router)
+
 
 
 @app.get("/health")

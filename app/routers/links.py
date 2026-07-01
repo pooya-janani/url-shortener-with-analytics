@@ -1,0 +1,98 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.dependencies import get_current_user_from_api_key
+from app.schemas import ShortLinkCreate, ShortLinkResponse
+from app.services.short_code import generate_short_code
+from app.repositories.short_link_repository import short_code_exists, create_short_link, get_short_link_by_code
+from app.services.security import hash_password
+from datetime import datetime, timezone
+from fastapi.responses import RedirectResponse
+
+
+
+router = APIRouter(
+    prefix="/api/v1/links",
+    tags=["links"],
+)
+
+
+@router.post("/", response_model= ShortLinkResponse)
+def create_short_link_router(
+    short_link: ShortLinkCreate, 
+    user= Depends(get_current_user_from_api_key),
+    db: Session = Depends(get_db),
+    ):
+    if short_link.custom_alias is None:
+        short_code = generate_short_code()
+        while short_code_exists(
+            db= db, 
+            short_code= short_code
+            ):
+            short_code = generate_short_code()
+    else:
+        short_code = short_link.custom_alias
+        if short_code_exists(
+            db=db,
+            short_code=short_code
+        ):
+            raise HTTPException(
+                status_code= status.HTTP_409_CONFLICT,
+                detail= "exists"
+            )
+    if short_link.password:
+        hashed_password = hash_password(short_link.password)
+    else:
+        hashed_password = None
+    
+    db_obj =  create_short_link(
+        db=db,
+        user_id= user.id,
+        original_url= str(short_link.original_url),
+        short_code= short_code,
+        password_hash= hashed_password,
+        expires_at= short_link.expires_at,
+        redirect_type= short_link.redirect_type
+    )
+
+    return {
+        "id": db_obj.id,
+        "original_url": db_obj.original_url,
+        "short_code": db_obj.short_code,
+        "short_url": f"http://localhost:8000/{db_obj.short_code}",
+        "expires_at": db_obj.expires_at,
+        "redirect_type": db_obj.redirect_type,
+        "is_active": db_obj.is_active,
+        "created_at": db_obj.created_at,
+    }
+    
+
+@router.get("/{short_code}")
+def redirect_func(
+    short_code, 
+    db: Session = Depends(get_db),
+    ):
+    db_record = get_short_link_by_code(
+        db=db,
+        short_code= short_code
+        )
+    if db_record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Short link not found",
+        )
+            
+    if not db_record.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Short link is inactive",
+        )
+
+    if db_record.expires_at and datetime.now(timezone.utc) > db_record.expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Short link expired",
+        )
+
+    return RedirectResponse(url=db_record.original_url)
