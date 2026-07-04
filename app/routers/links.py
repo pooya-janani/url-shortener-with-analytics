@@ -9,7 +9,8 @@ from app.repositories.short_link_repository import short_code_exists, create_sho
 from app.services.security import hash_password
 from datetime import datetime, timezone
 from fastapi.responses import RedirectResponse
-
+from app.services.cache import get_original_url_from_cache, refresh_hot_link
+from app.repositories.short_link_repository import get_short_link_by_code
 
 
 router = APIRouter(
@@ -73,26 +74,15 @@ def redirect_func(
     short_code, 
     db: Session = Depends(get_db),
     ):
-    db_record = get_short_link_by_code(
-        db=db,
-        short_code= short_code
-        )
-    if db_record is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Short link not found",
-        )
-            
-    if not db_record.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Short link is inactive",
-        )
 
-    if db_record.expires_at and datetime.now(timezone.utc) > db_record.expires_at:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Short link expired",
-        )
+    original_url = get_original_url_from_cache(short_code, db)
 
-    return RedirectResponse(url=db_record.original_url)
+    
+    if not original_url:
+        raise HTTPException(status_code=404, detail="Link not found or expired")
+
+    # Hot link detection 
+    refresh_hot_link(short_code)
+
+
+    return RedirectResponse(url=original_url)
