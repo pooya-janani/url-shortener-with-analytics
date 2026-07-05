@@ -53,4 +53,6 @@ class ShortLink(Base):
                 server_default= func.now(),
                 onupdate=func.now(),
                 nullable= False)
+    click_count = Column(Integer, nullable=False, default=0)
+    last_clicked_at = Column(DateTime(timezone=True), nullable=True)
     user = relationship("User", back_populates= "short_links")

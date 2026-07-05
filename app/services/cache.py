@@ -7,11 +7,12 @@ from app.repositories import short_link_repository
 REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = int(os.getenv("REDIS_PORT"))
 
-DEFAULT_TTL = 120  # seconds
+DEFAULT_TTL = 360  # seconds (360 for test)
 
 r = redis.Redis(
     host=REDIS_HOST,
     port=REDIS_PORT,
+    db=0,
     decode_responses=True
 )
 
@@ -50,3 +51,10 @@ def refresh_hot_link(short_code: str, extra_ttl: int = 300):
     current_ttl = r.ttl(short_code)
     if current_ttl != -2 and current_ttl < 60:  # key exists and <1 min remaining
         r.expire(short_code, current_ttl + extra_ttl)
+
+
+def increment_click(short_code: str):
+    """
+    Increment click counter in Redis using the same client instance.
+    """
+    return r.incr(f"clicks:{short_code}")

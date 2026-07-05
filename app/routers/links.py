@@ -5,13 +5,11 @@ from app.database import get_db
 from app.dependencies import get_current_user_from_api_key
 from app.schemas import ShortLinkCreate, ShortLinkResponse
 from app.services.short_code import generate_short_code
-from app.repositories.short_link_repository import short_code_exists, create_short_link, get_short_link_by_code
+from app.repositories.short_link_repository import short_code_exists, create_short_link
 from app.services.security import hash_password
-from datetime import datetime, timezone
 from fastapi.responses import RedirectResponse
-from app.services.cache import get_original_url_from_cache, refresh_hot_link
-from app.repositories.short_link_repository import get_short_link_by_code
-
+from app.services.cache import get_original_url_from_cache, refresh_hot_link, increment_click, r
+from app.tasks import flush_clicks_to_db
 
 router = APIRouter(
     prefix="/api/v1/links",
@@ -71,7 +69,7 @@ def create_short_link_router(
 
 @router.get("/{short_code}")
 def redirect_func(
-    short_code, 
+    short_code: str, 
     db: Session = Depends(get_db),
     ):
 
@@ -84,5 +82,8 @@ def redirect_func(
     # Hot link detection 
     refresh_hot_link(short_code)
 
+    increment_click(short_code)
+
+    flush_clicks_to_db.delay(short_code)
 
     return RedirectResponse(url=original_url)
