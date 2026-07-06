@@ -10,3 +10,4 @@ email-validator
 redis>=5.0.0
 celery[redis]>=5.3.0
 user-agents
+geoip2
