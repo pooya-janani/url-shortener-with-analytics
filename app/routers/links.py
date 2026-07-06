@@ -12,7 +12,7 @@ from app.services.cache import get_original_url_from_cache, refresh_hot_link, in
 from app.tasks.clicks import flush_clicks_to_db
 from app.services.rate_limit import check_rate_limit
 from app.tasks.analytics import record_visit_analytics
-
+from app.services.analytics import anonymize_ip
 
 router = APIRouter(
     prefix="/api/v1/links",
@@ -100,7 +100,7 @@ def redirect_func(
 
     record_visit_analytics.delay(
         short_code=short_code,
-        ip=request.client.host,
+        ip=anonymize_ip(request.client.host),
         user_agent=request.headers.get("user-agent"),
         referrer=request.headers.get("referer")
         )

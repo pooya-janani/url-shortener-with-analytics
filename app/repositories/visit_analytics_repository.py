@@ -3,8 +3,18 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app import models
 
-def create_visit(db: Session, short_code: str, ip: str, user_agent: str, referrer: str = None,
-                 country: str = None, city: str = None, device_type: str = None):
+def create_visit(
+    db: Session,
+    short_code: str,
+    ip: str,
+    user_agent: str,
+    browser: str | None = None,
+    os: str | None = None,
+    referrer: str | None = None,
+    country: str | None = None,
+    city: str | None = None,
+    device_type: str | None = None
+):
     """
     Create a new VisitAnalytics record in the database using the short_code to resolve short_link_id
     """
@@ -17,6 +27,8 @@ def create_visit(db: Session, short_code: str, ip: str, user_agent: str, referre
         short_link_id=short_link.id,
         ip=ip,
         user_agent=user_agent,
+        browser=browser,
+        os=os,
         referrer=referrer,
         country=country,
         city=city,
