@@ -1,7 +1,25 @@
+# Environment variables
 .env
+
+# Python
 __pycache__/
 *.pyc
 .venv/
 venv/
+
+# IDE
 .idea/
 .vscode/
+
+# Database volumes
+postgres_data/
+
+# GeoIP database
+geoip/*.mmdb
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
