@@ -39,3 +39,5 @@ def flush_clicks_to_db(self, short_code: str):
                     self.retry(exc=e)
     finally:
         db.close()
+
+

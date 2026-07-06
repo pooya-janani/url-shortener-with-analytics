@@ -9,3 +9,8 @@ celery = Celery(
     broker=f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
     backend=f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
 )
+
+celery.conf.imports = [
+    "app.tasks.clicks",
+    "app.tasks.analytics",
+]

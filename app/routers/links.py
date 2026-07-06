@@ -9,8 +9,9 @@ from app.repositories.short_link_repository import short_code_exists, create_sho
 from app.services.security import hash_password
 from fastapi.responses import RedirectResponse
 from app.services.cache import get_original_url_from_cache, refresh_hot_link, increment_click, r
-from app.tasks import flush_clicks_to_db
+from app.tasks.clicks import flush_clicks_to_db
 from app.services.rate_limit import check_rate_limit
+from app.tasks.analytics import record_visit_analytics
 
 
 router = APIRouter(
@@ -95,6 +96,14 @@ def redirect_func(
     
     if not original_url:
         raise HTTPException(status_code=404, detail="Link not found or expired")
+
+
+    record_visit_analytics.delay(
+        short_code=short_code,
+        ip=request.client.host,
+        user_agent=request.headers.get("user-agent"),
+        referrer=request.headers.get("referer")
+        )
 
     # Hot link detection 
     refresh_hot_link(short_code)

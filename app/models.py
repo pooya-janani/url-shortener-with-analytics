@@ -56,3 +56,23 @@ class ShortLink(Base):
     click_count = Column(Integer, nullable=False, default=0)
     last_clicked_at = Column(DateTime(timezone=True), nullable=True)
     user = relationship("User", back_populates= "short_links")
+    visit_analytics = relationship("VisitAnalytics", back_populates="short_link")
+
+
+
+class VisitAnalytics(Base):
+    __tablename__ = "visit_analytics"
+    id = Column(Integer, primary_key=True)
+    short_link_id = Column(Integer, ForeignKey("short_links.id"))
+    timestamp = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+        )
+    ip = Column(String)
+    user_agent = Column(String)
+    referrer = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    device_type = Column(String, nullable=True)
+    short_link = relationship("ShortLink", back_populates= "visit_analytics")
