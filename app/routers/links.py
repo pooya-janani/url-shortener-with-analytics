@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user_from_api_key
+from app.dependencies import get_current_user_from_api_key, get_current_user_from_api_key_optional
 from app.schemas import ShortLinkCreate, ShortLinkResponse
 from app.services.short_code import generate_short_code
 from app.repositories.short_link_repository import short_code_exists, create_short_link
@@ -10,6 +10,8 @@ from app.services.security import hash_password
 from fastapi.responses import RedirectResponse
 from app.services.cache import get_original_url_from_cache, refresh_hot_link, increment_click, r
 from app.tasks import flush_clicks_to_db
+from app.services.rate_limit import check_rate_limit
+
 
 router = APIRouter(
     prefix="/api/v1/links",
@@ -70,8 +72,23 @@ def create_short_link_router(
 @router.get("/{short_code}")
 def redirect_func(
     short_code: str, 
+    request: Request,
     db: Session = Depends(get_db),
+    user = Depends(get_current_user_from_api_key_optional)
     ):
+    
+    if user:
+        # Authenticated user: use user ID
+        key = f"user:{user.id}"
+        is_authenticated = True
+    else:
+        # Unauthenticated user: use client IP
+        key = f"ip:{request.client.host}"
+        is_authenticated = False
+
+    # Apply rate limiting
+    check_rate_limit(key=key, is_authenticated=is_authenticated)
+
 
     original_url = get_original_url_from_cache(short_code, db)
 

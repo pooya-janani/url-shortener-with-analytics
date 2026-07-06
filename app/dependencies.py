@@ -28,3 +28,13 @@ def get_current_user_from_api_key(
         )
     return api_key_record.user
     
+def get_current_user_from_api_key_optional(
+    x_api_key: str = Header(None),
+    db: Session = Depends(get_db),
+):
+    if not x_api_key:
+        return None
+    try:
+        return get_current_user_from_api_key(x_api_key, db)
+    except HTTPException:
+        return None
