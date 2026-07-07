@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, func, Index
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -63,12 +63,8 @@ class ShortLink(Base):
 class VisitAnalytics(Base):
     __tablename__ = "visit_analytics"
     id = Column(Integer, primary_key=True)
-    short_link_id = Column(Integer, ForeignKey("short_links.id"))
-    timestamp = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-        )
+    short_link_id = Column(Integer, ForeignKey("short_links.id"), index=True, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True, nullable=False)
     ip = Column(String)
     user_agent = Column(String)
     browser = Column(String, nullable=True)
@@ -78,3 +74,6 @@ class VisitAnalytics(Base):
     country = Column(String, nullable=True)
     city = Column(String, nullable=True)
     short_link = relationship("ShortLink", back_populates= "visit_analytics")
+    __table_args__ = (
+    Index("idx_visit_link_time", "short_link_id", "timestamp"),
+    )
